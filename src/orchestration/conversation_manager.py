@@ -72,6 +72,15 @@ class ConversationManager:
         profile = context.get('user_profile', {})
         baselines = context.get('baselines', {})
 
+        # Format baseline values, handling None
+        avg_systolic = baselines.get('avg_systolic')
+        avg_sleep = baselines.get('avg_sleep')
+        avg_steps = baselines.get('avg_steps')
+
+        systolic_str = f"{avg_systolic:.0f}" if avg_systolic else "N/A"
+        sleep_str = f"{avg_sleep:.1f}" if avg_sleep else "N/A"
+        steps_str = f"{avg_steps:,.0f}" if avg_steps else "N/A"
+
         return f"""You are an AI health coach for {profile.get('name', 'the user')}.
 
 USER PROFILE:
@@ -81,9 +90,9 @@ USER PROFILE:
 - VO2 Max Goal: {profile.get('vo2_max_goal', 43)}
 
 USER BASELINES (90-day averages):
-- Average Systolic BP: {baselines.get('avg_systolic', 'N/A'):.0f} mmHg
-- Average Sleep: {baselines.get('avg_sleep', 'N/A'):.1f} hours
-- Average Steps: {baselines.get('avg_steps', 'N/A'):,.0f}
+- Average Systolic BP: {systolic_str} mmHg
+- Average Sleep: {sleep_str} hours
+- Average Steps: {steps_str}
 
 KEY PATTERNS (from prior analysis):
 - VO2 Max: r=-0.494 with BP (strongest factor)

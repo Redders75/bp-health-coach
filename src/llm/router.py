@@ -156,6 +156,10 @@ class LLMRouter:
         metadata = self.classify_query(query)
         model_name = self.select_model(metadata)
 
+        # Check if Llama is available, fall back to Claude if not
+        if model_name == 'llama' and not self.llama.is_available():
+            model_name = 'claude'
+
         # Add context to query if provided
         full_query = query
         if context:

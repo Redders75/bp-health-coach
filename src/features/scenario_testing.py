@@ -34,13 +34,13 @@ class ScenarioEngine:
         baselines = get_user_baselines()
 
         if current_bp is None:
-            current_bp = baselines.get('avg_systolic', 142)
+            current_bp = baselines.get('avg_systolic') or 142
 
-        # Build current state from baselines
+        # Build current state from baselines (use defaults if None)
         current_state = {
-            'vo2_max': baselines.get('avg_vo2_max', 37),
-            'sleep_hours': baselines.get('avg_sleep', 6.5),
-            'steps': baselines.get('avg_steps', 9000),
+            'vo2_max': baselines.get('avg_vo2_max') or 37,
+            'sleep_hours': baselines.get('avg_sleep') or 6.5,
+            'steps': baselines.get('avg_steps') or 9000,
             'sleep_efficiency_pct': 80  # Default
         }
 

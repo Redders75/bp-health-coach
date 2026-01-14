@@ -6,8 +6,13 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
+from dotenv import load_dotenv
+
 # Base paths
 PROJECT_ROOT = Path(__file__).parent.parent
+
+# Load environment variables from .env file
+load_dotenv(PROJECT_ROOT / ".env")
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
@@ -24,7 +29,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 @dataclass
 class LLMConfig:
     """Configuration for LLM models."""
-    claude_model: str = "claude-3-5-sonnet-20241022"
+    claude_model: str = "claude-sonnet-4-20250514"
     gpt4_model: str = "gpt-4-turbo"
     llama_model: str = "llama-3.1-70b"
 
