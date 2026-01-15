@@ -16,6 +16,26 @@ from src.data.vector_store import get_vector_store
 from config.settings import RAW_DATA_DIR
 
 
+def safe_float(value, default=None):
+    """Convert value to float, returning default for empty/invalid values."""
+    if value is None or value == '':
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+
+def safe_int(value, default=None):
+    """Convert value to int, returning default for empty/invalid values."""
+    if value is None or value == '':
+        return default
+    try:
+        return int(float(value))
+    except (ValueError, TypeError):
+        return default
+
+
 def import_from_csv(csv_path: Path):
     """Import health data from a CSV file."""
     print(f"Importing data from {csv_path}")
@@ -37,24 +57,37 @@ def import_from_csv(csv_path: Path):
                     cursor.execute("""
                         INSERT OR REPLACE INTO daily_health_data
                         (date, systolic_mean, diastolic_mean, steps, sleep_hours,
-                         sleep_efficiency_pct, vo2_max, stress_score, hrv_mean)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         sleep_efficiency_pct, vo2_max, stress_score, hrv_mean,
+                         heart_rate_mean, respiratory_rate, active_calories, exercise_minutes)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         row.get('date'),
-                        float(row.get('systolic_mean', 0)) or None,
-                        float(row.get('diastolic_mean', 0)) or None,
-                        int(row.get('steps', 0)) or None,
-                        float(row.get('sleep_hours', 0)) or None,
-                        float(row.get('sleep_efficiency_pct', 0)) or None,
-                        float(row.get('vo2_max', 0)) or None,
-                        float(row.get('stress_score', 0)) or None,
-                        float(row.get('hrv_mean', 0)) or None,
+                        safe_float(row.get('systolic_mean')),
+                        safe_float(row.get('diastolic_mean')),
+                        safe_int(row.get('steps')),
+                        safe_float(row.get('sleep_hours')),
+                        safe_float(row.get('sleep_efficiency_pct')),
+                        safe_float(row.get('vo2_max')),
+                        safe_float(row.get('stress_score')),
+                        safe_float(row.get('hrv_mean')),
+                        safe_float(row.get('heart_rate_mean')),
+                        safe_float(row.get('respiratory_rate')),
+                        safe_float(row.get('active_calories')),
+                        safe_int(row.get('exercise_minutes')),
                     ))
 
-                    # Add to vector store
-                    data = {k: float(v) if v else 0 for k, v in row.items() if k != 'date'}
-                    target_date = date.fromisoformat(row['date'])
-                    vector_store.add_daily_summary(target_date, data)
+                    # Add to vector store (only if there's meaningful data)
+                    data = {}
+                    for k, v in row.items():
+                        if k != 'date' and v:
+                            try:
+                                data[k] = float(v)
+                            except (ValueError, TypeError):
+                                pass
+
+                    if data:  # Only add if we have some data
+                        target_date = date.fromisoformat(row['date'])
+                        vector_store.add_daily_summary(target_date, data)
 
                     imported += 1
 
