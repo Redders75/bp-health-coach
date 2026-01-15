@@ -48,6 +48,7 @@ def parse_apple_health_export(xml_path: Path, output_csv: Path):
     }
 
     record_count = 0
+    sleep_count = 0
 
     # Use iterparse for memory efficiency with large files
     context = ET.iterparse(xml_path, events=('end',))
@@ -56,7 +57,25 @@ def parse_apple_health_export(xml_path: Path, output_csv: Path):
         if elem.tag == 'Record':
             record_type = elem.get('type', '')
 
-            if record_type in type_map:
+            # Handle sleep records (Category type, not Quantity)
+            if record_type == 'HKCategoryTypeIdentifierSleepAnalysis':
+                try:
+                    start_str = elem.get('startDate', '')
+                    end_str = elem.get('endDate', '')
+                    value = elem.get('value', '')
+                    # Only count actual sleep, not just "InBed"
+                    if start_str and end_str and 'Asleep' in value:
+                        start_dt = datetime.strptime(start_str[:19], '%Y-%m-%d %H:%M:%S')
+                        end_dt = datetime.strptime(end_str[:19], '%Y-%m-%d %H:%M:%S')
+                        duration_hours = (end_dt - start_dt).total_seconds() / 3600
+                        # Assign sleep to the date when sleep started
+                        day_key = start_dt.date().isoformat()
+                        daily_data[day_key]['sleep_hours'] += duration_hours
+                        sleep_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+            elif record_type in type_map:
                 try:
                     # Parse date
                     start_date_str = elem.get('startDate', '')
@@ -88,7 +107,7 @@ def parse_apple_health_export(xml_path: Path, output_csv: Path):
 
                         record_count += 1
                         if record_count % 100000 == 0:
-                            print(f"  Processed {record_count:,} records...")
+                            print(f"  Processed {record_count:,} health records...")
 
                 except (ValueError, TypeError):
                     pass
@@ -96,21 +115,7 @@ def parse_apple_health_export(xml_path: Path, output_csv: Path):
             # Clear element to save memory
             elem.clear()
 
-        elif elem.tag == 'SleepAnalysis' or (elem.tag == 'Record' and 'Sleep' in elem.get('type', '')):
-            try:
-                start_str = elem.get('startDate', '')
-                end_str = elem.get('endDate', '')
-                if start_str and end_str:
-                    start_dt = datetime.strptime(start_str[:19], '%Y-%m-%d %H:%M:%S')
-                    end_dt = datetime.strptime(end_str[:19], '%Y-%m-%d %H:%M:%S')
-                    duration_hours = (end_dt - start_dt).total_seconds() / 3600
-                    day_key = start_dt.date().isoformat()
-                    daily_data[day_key]['sleep_hours'] += duration_hours
-            except (ValueError, TypeError):
-                pass
-            elem.clear()
-
-    print(f"Processed {record_count:,} total records")
+    print(f"Processed {record_count:,} health records + {sleep_count:,} sleep records")
     print(f"Found data for {len(daily_data)} days")
 
     # Write to CSV
