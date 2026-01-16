@@ -9,13 +9,13 @@ import json
 class LlamaClient:
     """Client for local Llama model interactions via Ollama."""
 
-    def __init__(self, model_name: str = "llama3.1:70b"):
+    def __init__(self, model_name: str = "llama3.1:8b"):
         """Initialize the Llama client."""
         self.model = model_name
         self._check_ollama()
 
     def _check_ollama(self) -> bool:
-        """Check if Ollama is installed and running."""
+        """Check if Ollama is installed and the model is available."""
         try:
             result = subprocess.run(
                 ["ollama", "list"],
@@ -23,7 +23,14 @@ class LlamaClient:
                 text=True,
                 timeout=5
             )
-            return result.returncode == 0
+            if result.returncode != 0:
+                return False
+            # Check if our specific model (with tag) is in the list
+            # Output format: "llama3.1:8b    46e0c10c039e    4.9 GB..."
+            for line in result.stdout.strip().split('\n'):
+                if line.startswith(self.model):
+                    return True
+            return False
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
 
