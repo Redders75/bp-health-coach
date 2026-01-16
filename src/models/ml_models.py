@@ -40,8 +40,8 @@ class BPPredictor:
                 # Return baseline estimate if no model
                 return (140.0, 10.0)
 
-        # Extract features in correct order
-        X = [[features.get(name, 0) for name in self.feature_names]]
+        # Extract features in correct order (handle None values)
+        X = [[features.get(name) or 0 for name in self.feature_names]]
 
         prediction = self.model.predict(X)[0]
 
