@@ -10,13 +10,25 @@ from src.models.ml_models import BPPredictor
 @dataclass
 class ScenarioResult:
     """Result of a what-if scenario analysis."""
-    current_bp: float
-    predicted_bp: float
-    bp_change: float
+    current_systolic: float
+    current_diastolic: float
+    predicted_systolic: float
+    predicted_diastolic: float
+    bp_change: float  # Systolic change
+    diastolic_change: float
     confidence_interval: Tuple[float, float]
     timeline_weeks: int
     feasibility: str
     recommendations: List[str]
+
+    # Backwards compatibility properties
+    @property
+    def current_bp(self) -> float:
+        return self.current_systolic
+
+    @property
+    def predicted_bp(self) -> float:
+        return self.predicted_systolic
 
 
 class ScenarioAnalyzer:
@@ -37,7 +49,8 @@ class ScenarioAnalyzer:
         self,
         current_state: Dict[str, float],
         hypothetical_state: Dict[str, float],
-        current_bp: float
+        current_systolic: float,
+        current_diastolic: float = None
     ) -> ScenarioResult:
         """
         Analyze the impact of changing health metrics.
@@ -45,23 +58,32 @@ class ScenarioAnalyzer:
         Args:
             current_state: Current health metrics
             hypothetical_state: Proposed health metrics
-            current_bp: Current blood pressure
+            current_systolic: Current systolic blood pressure
+            current_diastolic: Current diastolic blood pressure (estimated if not provided)
 
         Returns:
             ScenarioResult with predictions and recommendations
         """
-        # Calculate expected BP change
-        total_change = 0.0
+        # Estimate diastolic if not provided (typical ratio ~0.65)
+        if current_diastolic is None:
+            current_diastolic = current_systolic * 0.65
+
+        # Calculate expected systolic BP change
+        systolic_change = 0.0
         for metric, coefficient in self.impact_coefficients.items():
             if metric in hypothetical_state and metric in current_state:
                 delta = hypothetical_state[metric] - current_state[metric]
-                total_change += delta * coefficient
+                systolic_change += delta * coefficient
 
-        predicted_bp = current_bp + total_change
+        predicted_systolic = current_systolic + systolic_change
 
-        # Determine confidence interval
-        ci_low = predicted_bp - 5
-        ci_high = predicted_bp + 5
+        # Diastolic typically changes proportionally (about 50% of systolic change)
+        diastolic_change = systolic_change * 0.5
+        predicted_diastolic = current_diastolic + diastolic_change
+
+        # Determine confidence interval (for systolic)
+        ci_low = predicted_systolic - 5
+        ci_high = predicted_systolic + 5
 
         # Estimate timeline and feasibility
         timeline, feasibility = self._estimate_feasibility(
@@ -74,9 +96,12 @@ class ScenarioAnalyzer:
         )
 
         return ScenarioResult(
-            current_bp=current_bp,
-            predicted_bp=predicted_bp,
-            bp_change=total_change,
+            current_systolic=current_systolic,
+            current_diastolic=current_diastolic,
+            predicted_systolic=predicted_systolic,
+            predicted_diastolic=predicted_diastolic,
+            bp_change=systolic_change,
+            diastolic_change=diastolic_change,
             confidence_interval=(ci_low, ci_high),
             timeline_weeks=timeline,
             feasibility=feasibility,

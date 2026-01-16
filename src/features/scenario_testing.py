@@ -19,22 +19,26 @@ class ScenarioEngine:
     def test_scenario(
         self,
         changes: Dict[str, float],
-        current_bp: Optional[float] = None
+        current_systolic: Optional[float] = None,
+        current_diastolic: Optional[float] = None
     ) -> ScenarioResult:
         """
         Test a hypothetical scenario.
 
         Args:
             changes: Dict of metric changes (e.g., {'vo2_max': 42})
-            current_bp: Current BP (uses baseline if not provided)
+            current_systolic: Current systolic BP (uses baseline if not provided)
+            current_diastolic: Current diastolic BP (uses baseline if not provided)
 
         Returns:
             ScenarioResult with predictions
         """
         baselines = get_user_baselines()
 
-        if current_bp is None:
-            current_bp = baselines.get('avg_systolic') or 142
+        if current_systolic is None:
+            current_systolic = baselines.get('avg_systolic') or 142
+        if current_diastolic is None:
+            current_diastolic = baselines.get('avg_diastolic') or 90
 
         # Build current state from baselines (use defaults if None)
         current_state = {
@@ -49,7 +53,7 @@ class ScenarioEngine:
         hypothetical_state.update(changes)
 
         return self.analyzer.analyze_scenario(
-            current_state, hypothetical_state, current_bp
+            current_state, hypothetical_state, current_systolic, current_diastolic
         )
 
     def test_scenario_natural_language(self, query: str) -> str:
@@ -115,9 +119,9 @@ class ScenarioEngine:
         response = f"""SCENARIO ANALYSIS: {changes_str}
 
 PREDICTED IMPACT:
-- BP reduction: {result.bp_change:.1f} mmHg
-- Your {result.current_bp:.0f} mmHg → predicted {result.predicted_bp:.0f} mmHg
-- 95% confidence interval: {result.confidence_interval[0]:.0f} to {result.confidence_interval[1]:.0f} mmHg
+- BP change: {result.bp_change:.1f}/{result.diastolic_change:.1f} mmHg
+- Your {result.current_systolic:.0f}/{result.current_diastolic:.0f} mmHg → predicted {result.predicted_systolic:.0f}/{result.predicted_diastolic:.0f} mmHg
+- 95% confidence interval: {result.confidence_interval[0]:.0f} to {result.confidence_interval[1]:.0f} mmHg (systolic)
 
 TIMELINE:
 - Estimated achievement: {result.timeline_weeks} weeks
