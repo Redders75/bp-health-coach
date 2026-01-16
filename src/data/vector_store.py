@@ -25,20 +25,29 @@ class HealthVectorStore:
 
     def create_daily_summary(self, target_date: date, data: Dict[str, Any]) -> str:
         """Convert structured health data to natural language summary."""
-        bp = data.get('systolic_mean', 'N/A')
-        sleep_hrs = data.get('sleep_hours', 0)
-        sleep_eff = data.get('sleep_efficiency_pct', 0)
-        steps = data.get('steps', 0)
-        vo2 = data.get('vo2_max', 'N/A')
-        stress = data.get('stress_score', 'N/A')
+        systolic = data.get('systolic_mean')
+        diastolic = data.get('diastolic_mean')
+        sleep_hrs = data.get('sleep_hours') or 0
+        sleep_eff = data.get('sleep_efficiency_pct') or 0
+        steps = data.get('steps') or 0
+        vo2 = data.get('vo2_max')
+        stress = data.get('stress_score')
 
-        # Determine BP category
-        if isinstance(bp, (int, float)):
-            if bp < 120:
+        # Format BP as systolic/diastolic
+        if systolic is not None and diastolic is not None:
+            bp_display = f"{systolic:.0f}/{diastolic:.0f}"
+        elif systolic is not None:
+            bp_display = f"{systolic:.0f}/--"
+        else:
+            bp_display = "N/A"
+
+        # Determine BP category based on systolic
+        if systolic is not None:
+            if systolic < 120:
                 bp_cat = "normal"
-            elif bp < 130:
+            elif systolic < 130:
                 bp_cat = "elevated"
-            elif bp < 140:
+            elif systolic < 140:
                 bp_cat = "stage 1 hypertension"
             else:
                 bp_cat = "stage 2 hypertension"
@@ -55,11 +64,11 @@ class HealthVectorStore:
 
         summary = (
             f"{target_date.isoformat()}: "
-            f"BP {bp} mmHg ({bp_cat}). "
+            f"BP {bp_display} mmHg ({bp_cat}). "
             f"Sleep {sleep_hrs:.1f}hrs ({sleep_eff:.0f}% efficiency) - {sleep_quality}. "
             f"Activity {steps:,} steps. "
-            f"VO2 Max {vo2}. "
-            f"Stress score {stress}."
+            f"VO2 Max {vo2 if vo2 else 'N/A'}. "
+            f"Stress score {stress if stress else 'N/A'}."
         )
 
         return summary
@@ -76,6 +85,7 @@ class HealthVectorStore:
             metadatas=[{
                 "date": target_date.isoformat(),
                 "systolic": data.get('systolic_mean'),
+                "diastolic": data.get('diastolic_mean'),
                 "sleep_hours": data.get('sleep_hours'),
                 "steps": data.get('steps')
             }]

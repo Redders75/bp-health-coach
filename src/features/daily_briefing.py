@@ -108,14 +108,20 @@ Expected BP: {prediction['predicted_bp']:.0f} mmHg (±{prediction['confidence']:
 """
 
         # Extract yesterday's metrics (handle None values)
-        bp = yesterday_data.get('systolic_mean')
-        bp = bp if bp is not None else 'N/A'
+        systolic = yesterday_data.get('systolic_mean')
+        diastolic = yesterday_data.get('diastolic_mean')
+        if systolic is not None and diastolic is not None:
+            bp_display = f"{systolic:.0f}/{diastolic:.0f}"
+        elif systolic is not None:
+            bp_display = f"{systolic:.0f}/--"
+        else:
+            bp_display = 'N/A'
         sleep = yesterday_data.get('sleep_hours') or 0
         sleep_eff = yesterday_data.get('sleep_efficiency_pct') or 0
         steps = yesterday_data.get('steps') or 0
 
         # Determine categories
-        bp_category = self._categorize_bp(bp) if isinstance(bp, (int, float)) else 'unknown'
+        bp_category = self._categorize_bp(systolic) if systolic is not None else 'unknown'
         sleep_quality = 'good' if sleep >= 7 else ('fair' if sleep >= 6 else 'poor')
         activity_level = 'active' if steps >= 10000 else ('moderate' if steps >= 5000 else 'low')
 
@@ -125,7 +131,7 @@ Expected BP: {prediction['predicted_bp']:.0f} mmHg (±{prediction['confidence']:
         briefing = f"""MORNING BRIEFING: {date_str}
 
 YESTERDAY'S SUMMARY:
-- BP: {bp} mmHg ({bp_category})
+- BP: {bp_display} mmHg ({bp_category})
 - Sleep: {sleep:.1f}hrs ({sleep_eff:.0f}% efficiency) - {sleep_quality}
 - Activity: {steps:,} steps - {activity_level}
 
@@ -189,12 +195,12 @@ RECOMMENDATIONS:
 
     def _get_motivational_message(self, yesterday: Dict, baselines: Dict) -> str:
         """Generate a motivational message based on performance."""
-        bp = yesterday.get('systolic_mean') or 999
+        systolic = yesterday.get('systolic_mean') or 999
         avg_bp = baselines.get('avg_systolic') or 142
 
-        if bp < avg_bp - 5:
+        if systolic < avg_bp - 5:
             return "Great job! Your BP was below your average yesterday. Keep up the good work!"
-        elif bp > avg_bp + 5:
+        elif systolic > avg_bp + 5:
             return "Yesterday was a tougher day for BP. Today is a fresh start!"
         else:
             return "Consistency is key. Every healthy choice adds up over time."

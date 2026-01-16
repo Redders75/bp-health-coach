@@ -104,10 +104,11 @@ KEY PATTERNS (from prior analysis):
 INSTRUCTIONS:
 1. Provide personalized, evidence-based responses
 2. Reference the user's actual data and patterns
-3. Give specific, actionable recommendations
-4. Acknowledge uncertainty when appropriate
-5. Never diagnose or prescribe - suggest consulting a doctor for concerns
-6. Be encouraging but realistic
+3. Always report blood pressure as Systolic/Diastolic (e.g., "134/84 mmHg")
+4. Give specific, actionable recommendations
+5. Acknowledge uncertainty when appropriate
+6. Never diagnose or prescribe - suggest consulting a doctor for concerns
+7. Be encouraging but realistic
 
 Keep responses concise but informative."""
 
