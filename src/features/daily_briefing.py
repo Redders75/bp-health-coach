@@ -44,7 +44,7 @@ class DailyBriefingGenerator:
         baselines = get_user_baselines()
 
         # Generate prediction for today
-        prediction = self._generate_prediction(yesterday_data)
+        prediction = self._generate_prediction(yesterday_data, baselines)
 
         # Build briefing
         briefing = self._compose_briefing(
@@ -57,11 +57,12 @@ class DailyBriefingGenerator:
 
         return briefing
 
-    def _generate_prediction(self, recent_data: Optional[Dict]) -> Dict[str, Any]:
+    def _generate_prediction(self, recent_data: Optional[Dict], baselines: Optional[Dict] = None) -> Dict[str, Any]:
         """Generate BP prediction for today."""
         if not recent_data:
             return {
-                'predicted_bp': 140,
+                'predicted_systolic': 140,
+                'predicted_diastolic': 90,
                 'confidence': 10,
                 'main_factor': 'insufficient data'
             }
@@ -75,14 +76,24 @@ class DailyBriefingGenerator:
             'hrv_mean': recent_data.get('hrv_mean') or 30
         }
 
-        predicted, confidence = self.predictor.predict(features)
+        predicted_systolic, confidence = self.predictor.predict(features)
+
+        # Estimate diastolic based on user's typical ratio or default 0.65
+        if baselines:
+            avg_systolic = baselines.get('avg_systolic') or 140
+            avg_diastolic = baselines.get('avg_diastolic') or 90
+            ratio = avg_diastolic / avg_systolic if avg_systolic else 0.65
+        else:
+            ratio = 0.65
+        predicted_diastolic = predicted_systolic * ratio
 
         # Determine main influencing factor
         importance = self.predictor.get_feature_importance()
         main_factor = max(importance, key=importance.get)
 
         return {
-            'predicted_bp': predicted,
+            'predicted_systolic': predicted_systolic,
+            'predicted_diastolic': predicted_diastolic,
             'confidence': confidence,
             'main_factor': main_factor
         }
@@ -104,7 +115,7 @@ class DailyBriefingGenerator:
 No data available for yesterday. Please ensure your health data is synced.
 
 Today's prediction is based on your historical averages.
-Expected BP: {prediction['predicted_bp']:.0f} mmHg (±{prediction['confidence']:.0f})
+Expected BP: {prediction['predicted_systolic']:.0f}/{prediction['predicted_diastolic']:.0f} mmHg (±{prediction['confidence']:.0f})
 """
 
         # Extract yesterday's metrics (handle None values)
@@ -136,7 +147,7 @@ YESTERDAY'S SUMMARY:
 - Activity: {steps:,} steps - {activity_level}
 
 TODAY'S PREDICTION:
-Expected BP: {prediction['predicted_bp']:.0f} mmHg (±{prediction['confidence']:.0f})
+Expected BP: {prediction['predicted_systolic']:.0f}/{prediction['predicted_diastolic']:.0f} mmHg (±{prediction['confidence']:.0f})
 Key factor: {prediction['main_factor'].replace('_', ' ').title()}
 
 RECOMMENDATIONS:
