@@ -67,12 +67,12 @@ class DailyBriefingGenerator:
             }
 
         features = {
-            'sleep_hours': recent_data.get('sleep_hours', 7),
-            'sleep_efficiency_pct': recent_data.get('sleep_efficiency_pct', 80),
-            'steps': recent_data.get('steps', 8000),
-            'vo2_max': recent_data.get('vo2_max', 37),
-            'stress_score': recent_data.get('stress_score', 50),
-            'hrv_mean': recent_data.get('hrv_mean', 30)
+            'sleep_hours': recent_data.get('sleep_hours') or 7,
+            'sleep_efficiency_pct': recent_data.get('sleep_efficiency_pct') or 80,
+            'steps': recent_data.get('steps') or 8000,
+            'vo2_max': recent_data.get('vo2_max') or 37,
+            'stress_score': recent_data.get('stress_score') or 50,
+            'hrv_mean': recent_data.get('hrv_mean') or 30
         }
 
         predicted, confidence = self.predictor.predict(features)
@@ -107,11 +107,12 @@ Today's prediction is based on your historical averages.
 Expected BP: {prediction['predicted_bp']:.0f} mmHg (±{prediction['confidence']:.0f})
 """
 
-        # Extract yesterday's metrics
-        bp = yesterday_data.get('systolic_mean', 'N/A')
-        sleep = yesterday_data.get('sleep_hours', 0)
-        sleep_eff = yesterday_data.get('sleep_efficiency_pct', 0)
-        steps = yesterday_data.get('steps', 0)
+        # Extract yesterday's metrics (handle None values)
+        bp = yesterday_data.get('systolic_mean')
+        bp = bp if bp is not None else 'N/A'
+        sleep = yesterday_data.get('sleep_hours') or 0
+        sleep_eff = yesterday_data.get('sleep_efficiency_pct') or 0
+        steps = yesterday_data.get('steps') or 0
 
         # Determine categories
         bp_category = self._categorize_bp(bp) if isinstance(bp, (int, float)) else 'unknown'
@@ -161,9 +162,9 @@ RECOMMENDATIONS:
         """Generate personalized recommendations."""
         recommendations = []
 
-        sleep = yesterday.get('sleep_hours', 0)
-        steps = yesterday.get('steps', 0)
-        vo2 = yesterday.get('vo2_max', 0)
+        sleep = yesterday.get('sleep_hours') or 0
+        steps = yesterday.get('steps') or 0
+        vo2 = yesterday.get('vo2_max') or 0
 
         if sleep < 7:
             recommendations.append(
@@ -188,8 +189,8 @@ RECOMMENDATIONS:
 
     def _get_motivational_message(self, yesterday: Dict, baselines: Dict) -> str:
         """Generate a motivational message based on performance."""
-        bp = yesterday.get('systolic_mean', 999)
-        avg_bp = baselines.get('avg_systolic', 142)
+        bp = yesterday.get('systolic_mean') or 999
+        avg_bp = baselines.get('avg_systolic') or 142
 
         if bp < avg_bp - 5:
             return "Great job! Your BP was below your average yesterday. Keep up the good work!"
