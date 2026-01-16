@@ -359,5 +359,119 @@ uvicorn src.api.main:app --reload
 
 ---
 
-**Test Status:** All tests passing
+## Test 9: Streamlit Daily Briefing Page
+
+**Test:** Generate briefing for a date with data (2026-01-08)
+
+**Result:** PASS (after fixes)
+
+**Issues Found & Fixed:**
+
+1. **None value handling** - `TypeError: unsupported format string passed to NoneType`
+   - Fix: Changed `.get(key, default)` to `.get(key) or default` pattern throughout
+   - Affected: daily_briefing.py, ml_models.py
+
+2. **Module import error** - `ModuleNotFoundError: No module named 'src'`
+   - Fix: Added `sys.path.insert(0, project_root)` to streamlit_app.py
+
+**Output (after fixes):**
+```
+MORNING BRIEFING: Wednesday, January 08, 2026
+
+YESTERDAY'S SUMMARY:
+- BP: 146/94 mmHg (stage 2 hypertension)
+- Sleep: 6.5hrs (0% efficiency) - fair
+- Activity: 26,335 steps - active
+
+TODAY'S PREDICTION:
+Expected BP: 140/91 mmHg (±10)
+Key factor: Vo2 Max
+```
+
+---
+
+## Test 10: BP Display Format (Systolic/Diastolic)
+
+**Requirement:** Display BP as "Systolic/Diastolic" format (e.g., "134/84 mmHg")
+
+**Result:** PASS (after fixes)
+
+**Files Updated:**
+- `src/features/daily_briefing.py` - Briefing output
+- `src/features/scenario_testing.py` - Scenario results
+- `src/models/predictions.py` - ScenarioResult dataclass
+- `src/data/vector_store.py` - Vector summaries
+- `src/orchestration/conversation_manager.py` - LLM instructions
+- `src/ui/streamlit_app.py` - UI display
+
+**Before:** `BP: 138 mmHg`
+**After:** `BP: 138/90 mmHg`
+
+**Diastolic Estimation:**
+- For predictions: Uses user's historical systolic/diastolic ratio
+- For scenario changes: Diastolic change = 50% of systolic change
+
+---
+
+## Test 11: Scenario Testing with Diastolic
+
+**Test:** What-if analysis shows both systolic and diastolic values
+
+**Result:** PASS (after fixes)
+
+**Sample Output:**
+```
+Current BP: 138/90 mmHg
+Predicted BP: 130/85 mmHg
+BP Change: -8.2/-4.1 mmHg
+```
+
+**UI Fix:** Added `delta_color="inverse"` so:
+- BP decrease → Green (good)
+- BP increase → Red (bad)
+
+---
+
+## Summary (Updated)
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Daily Briefing (CLI) | PASS | Works, handles missing data gracefully |
+| Data Lookup | PASS | Accurate data retrieval and context |
+| Explanation Query | PASS | Multi-factor analysis with citations |
+| LLM Router | PASS | After fix for model detection |
+| Apple Health Parser | PASS | After fix for sleep records |
+| Database Import | PASS | After fix for empty values |
+| Database Queries | PASS | Correct data returned |
+| Streamlit Web Interface | PASS | 3 pages functional |
+| Streamlit Briefing Page | PASS | After None value fixes |
+| BP Display Format | PASS | Shows Systolic/Diastolic throughout |
+| Scenario Testing | PASS | Shows both BP values with correct delta colors |
+
+### All Bugs Fixed During Testing
+
+| Bug | File(s) | Fix |
+|-----|---------|-----|
+| Llama model detection | llama.py | Changed default to 8b, check exact model name |
+| Apple Health sleep parsing | parse_apple_health.py | Moved sleep handling inside Record block |
+| Import empty values | import_health_data.py | Added safe_float/safe_int helpers |
+| Streamlit module import | streamlit_app.py | Added sys.path for project root |
+| None value formatting | daily_briefing.py, ml_models.py | Use `or` pattern instead of `.get()` default |
+| BP only showing systolic | Multiple files | Added diastolic throughout |
+| Scenario delta color | streamlit_app.py | Added `delta_color="inverse"` |
+
+### Performance
+
+| Operation | Time |
+|-----------|------|
+| Simple query (Llama local) | ~5 seconds |
+| Complex query (Claude API) | ~8 seconds |
+| Apple Health parse (1.4GB) | ~3 minutes |
+| Database import (4032 rows) | ~30 seconds |
+| Streamlit page load | ~2 seconds |
+
+---
+
+**Test Status:** All 11 tests passing
+**Bugs Fixed:** 7
 **Ready for:** Phase 3B development or user testing
