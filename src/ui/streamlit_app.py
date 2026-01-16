@@ -160,15 +160,18 @@ def render_scenario_page():
             with st.spinner("Analyzing..."):
                 result = engine.test_scenario(changes)
 
-            # Display results
+            # Display results - use inverse delta_color so decreases show as green (good for BP)
             st.metric(
-                "Predicted BP Change",
-                f"{result.bp_change:+.1f}/{result.diastolic_change:+.1f} mmHg",
-                delta=f"{result.predicted_systolic:.0f}/{result.predicted_diastolic:.0f} mmHg predicted"
+                "Current BP",
+                f"{result.current_systolic:.0f}/{result.current_diastolic:.0f} mmHg",
+            )
+            st.metric(
+                "Predicted BP",
+                f"{result.predicted_systolic:.0f}/{result.predicted_diastolic:.0f} mmHg",
+                delta=f"{result.bp_change:+.1f}/{result.diastolic_change:+.1f} mmHg",
+                delta_color="inverse"  # Negative (decrease) = green, Positive (increase) = red
             )
 
-            st.write(f"**Current BP:** {result.current_systolic:.0f}/{result.current_diastolic:.0f} mmHg")
-            st.write(f"**Predicted BP:** {result.predicted_systolic:.0f}/{result.predicted_diastolic:.0f} mmHg")
             st.write(f"**Confidence Interval:** {result.confidence_interval[0]:.0f} to {result.confidence_interval[1]:.0f} mmHg (systolic)")
             st.write(f"**Timeline:** {result.timeline_weeks} weeks")
             st.write(f"**Feasibility:** {result.feasibility}")
