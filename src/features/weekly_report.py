@@ -86,6 +86,8 @@ class WeeklyReportGenerator:
             stats['bp_days'] = len(systolic_values)
         if diastolic_values:
             stats['diastolic_avg'] = mean(diastolic_values)
+            stats['diastolic_min'] = min(diastolic_values)
+            stats['diastolic_max'] = max(diastolic_values)
 
         # Sleep stats
         sleep_values = [d['sleep_hours'] for d in data if d.get('sleep_hours')]
@@ -125,18 +127,20 @@ class WeeklyReportGenerator:
             return patterns
 
         # Find best/worst BP days
-        bp_days = [(d['date'], d['systolic_mean'], d) for d in data if d.get('systolic_mean')]
+        bp_days = [(d['date'], d['systolic_mean'], d.get('diastolic_mean'), d) for d in data if d.get('systolic_mean')]
         if bp_days:
             bp_days_sorted = sorted(bp_days, key=lambda x: x[1])
             patterns['best_day'] = {
                 'date': bp_days_sorted[0][0],
                 'bp': bp_days_sorted[0][1],
-                'data': bp_days_sorted[0][2]
+                'diastolic': bp_days_sorted[0][2],
+                'data': bp_days_sorted[0][3]
             }
             patterns['worst_day'] = {
                 'date': bp_days_sorted[-1][0],
                 'bp': bp_days_sorted[-1][1],
-                'data': bp_days_sorted[-1][2]
+                'diastolic': bp_days_sorted[-1][2],
+                'data': bp_days_sorted[-1][3]
             }
 
         # Identify trends
@@ -205,10 +209,12 @@ Please ensure your Apple Health data is synced.
         # BP Section
         if stats.get('bp_avg'):
             diastolic_avg = stats.get('diastolic_avg', stats['bp_avg'] * 0.65)
+            diastolic_min = stats.get('diastolic_min', stats['bp_min'] * 0.65)
+            diastolic_max = stats.get('diastolic_max', stats['bp_max'] * 0.65)
             report += f"""
 Average: {stats['bp_avg']:.0f}/{diastolic_avg:.0f} mmHg
-Range: {stats['bp_min']:.0f} - {stats['bp_max']:.0f} mmHg (systolic)
-Variability: ±{stats['bp_std']:.1f} mmHg
+Range: {stats['bp_min']:.0f}/{diastolic_min:.0f} - {stats['bp_max']:.0f}/{diastolic_max:.0f} mmHg
+Variability: ±{stats['bp_std']:.1f} mmHg (systolic)
 Days with readings: {stats['bp_days']}/7
 """
             # Compare to previous week
@@ -293,20 +299,26 @@ Goal: {user_profile.vo2_max_goal} mL/kg/min
 """
         if patterns.get('best_day'):
             best = patterns['best_day']
+            best_diastolic = best.get('diastolic') or best['bp'] * 0.65
+            best_sleep = best['data'].get('sleep_hours')
+            best_steps = best['data'].get('steps')
             report += f"""
 BEST DAY: {best['date']}
-- BP: {best['bp']:.0f} mmHg
-- Sleep: {best['data'].get('sleep_hours', 'N/A')} hours
-- Steps: {best['data'].get('steps', 'N/A'):,}
+- BP: {best['bp']:.0f}/{best_diastolic:.0f} mmHg
+- Sleep: {f"{best_sleep:.1f}" if best_sleep else "N/A"} hours
+- Steps: {f"{best_steps:,}" if best_steps else "N/A"}
 """
 
         if patterns.get('worst_day'):
             worst = patterns['worst_day']
+            worst_diastolic = worst.get('diastolic') or worst['bp'] * 0.65
+            worst_sleep = worst['data'].get('sleep_hours')
+            worst_steps = worst['data'].get('steps')
             report += f"""
 CHALLENGING DAY: {worst['date']}
-- BP: {worst['bp']:.0f} mmHg
-- Sleep: {worst['data'].get('sleep_hours', 'N/A')} hours
-- Steps: {worst['data'].get('steps', 'N/A'):,}
+- BP: {worst['bp']:.0f}/{worst_diastolic:.0f} mmHg
+- Sleep: {f"{worst_sleep:.1f}" if worst_sleep else "N/A"} hours
+- Steps: {f"{worst_steps:,}" if worst_steps else "N/A"}
 """
 
         if patterns.get('correlations'):

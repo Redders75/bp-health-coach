@@ -228,7 +228,11 @@ def render_dashboard_page():
             for goal in dashboard['goals'][:2]:  # Show top 2 goals
                 progress = min(100, goal['progress_pct']) / 100
                 status_icon = "✅" if goal['status'] == 'achieved' else "🔄"
-                st.write(f"{status_icon} **{goal['name']}**: {goal['current']:.1f} → {goal['target']:.1f} {goal['unit']}")
+                # Display BP as systolic/diastolic
+                if goal['name'] == "Blood Pressure" and goal.get('diastolic'):
+                    st.write(f"{status_icon} **{goal['name']}**: {goal['current']:.0f}/{goal['diastolic']:.0f} → {goal['target']:.0f} {goal['unit']}")
+                else:
+                    st.write(f"{status_icon} **{goal['name']}**: {goal['current']:.1f} → {goal['target']:.1f} {goal['unit']}")
                 st.progress(progress)
         except Exception as e:
             st.error(f"Could not load goals: {e}")
@@ -446,7 +450,11 @@ def render_goals_page():
                 progress = min(100, goal['progress_pct']) / 100
                 st.progress(progress, text=f"{goal['progress_pct']:.0f}% complete")
 
-                st.write(f"**Current:** {goal['current']:.1f} {goal['unit']} → **Target:** {goal['target']:.1f} {goal['unit']}")
+                # Display BP as systolic/diastolic
+                if goal['name'] == "Blood Pressure" and goal.get('diastolic'):
+                    st.write(f"**Current:** {goal['current']:.0f}/{goal['diastolic']:.0f} {goal['unit']} → **Target:** {goal['target']:.0f} {goal['unit']} (systolic)")
+                else:
+                    st.write(f"**Current:** {goal['current']:.1f} {goal['unit']} → **Target:** {goal['target']:.1f} {goal['unit']}")
 
             with col2:
                 trend = goal['trend']

@@ -138,6 +138,9 @@ class GoalTracker:
         recent_data = get_health_data_range(today - timedelta(days=7), today)
         current = self._calculate_current_values(recent_data)
 
+        # Store diastolic for BP display
+        self._current_diastolic = current.get('diastolic')
+
         goals = []
 
         # BP Goal
@@ -205,6 +208,10 @@ class GoalTracker:
         if bp_vals:
             values['bp'] = mean(bp_vals)
 
+        diastolic_vals = [d['diastolic_mean'] for d in recent_data if d.get('diastolic_mean')]
+        if diastolic_vals:
+            values['diastolic'] = mean(diastolic_vals)
+
         vo2_vals = [d['vo2_max'] for d in recent_data if d.get('vo2_max')]
         if vo2_vals:
             values['vo2_max'] = vo2_vals[0]  # Use most recent
@@ -249,6 +256,9 @@ class GoalTracker:
                 'trend': self._calculate_trend(goal.metric),
                 'projection': self._project_achievement(goal)
             }
+            # Add diastolic for BP goal display
+            if goal.name == "Blood Pressure" and hasattr(self, '_current_diastolic'):
+                goal_data['diastolic'] = self._current_diastolic
             dashboard['goals'].append(goal_data)
 
             if goal.status == GoalStatus.ACHIEVED:
@@ -449,7 +459,12 @@ class GoalTracker:
             emoji = status_emoji_map.get(goal['status'], '○')
 
             output += f"{emoji} {goal['name']}\n"
-            output += f"   Current: {goal['current']:.1f} {goal['unit']} → Target: {goal['target']:.1f} {goal['unit']}\n"
+            # Display BP as systolic/diastolic
+            if goal['name'] == "Blood Pressure" and goal.get('diastolic'):
+                diastolic = goal['diastolic']
+                output += f"   Current: {goal['current']:.0f}/{diastolic:.0f} {goal['unit']} → Target: {goal['target']:.0f} {goal['unit']} (systolic)\n"
+            else:
+                output += f"   Current: {goal['current']:.1f} {goal['unit']} → Target: {goal['target']:.1f} {goal['unit']}\n"
 
             # Progress bar
             progress = min(100, goal['progress_pct'])
