@@ -1,6 +1,6 @@
 # BP Health Coach - Current Features & Usage Guide
 
-**Version:** Phase 3B Complete
+**Version:** Phase 3D Complete (v1.0)
 **Last Updated:** January 17, 2026
 
 ---
@@ -14,12 +14,18 @@ The BP Health Coach is an AI-powered personal health assistant that transforms y
 | Component | Status | Description |
 |-----------|--------|-------------|
 | CLI Interface | Working | Terminal-based chat and commands |
-| Streamlit Web UI | Working | Browser-based interface with 3 pages |
+| Streamlit Web UI | Working | Browser-based interface with 8 pages |
 | FastAPI Backend | Working | REST API for integrations |
 | Multi-LLM Support | Working | Claude, GPT-4, and local Llama |
 | Health Data Import | Working | Apple Health XML parser |
 | Vector Search | Working | Semantic search across health history |
 | ML Predictions | Working | BP predictions based on lifestyle factors |
+| Weekly Reports | Working | Comprehensive weekly health analysis |
+| Goal Tracking | Working | Progress toward BP, VO2, sleep, steps goals |
+| Alert System | Working | Pattern detection and notifications |
+| Scheduler | Working | Automated briefings and alert checks |
+| Dashboard | Working | Health overview with metrics and charts |
+| Settings | Working | User profile and preferences configuration |
 
 ### Your Data
 
@@ -44,7 +50,7 @@ python -m src.ui.cli
 
 ### 2. Streamlit Web Interface
 
-A visual web interface with chat, briefings, and scenario testing.
+A visual web interface with 8 pages: Dashboard, Chat, Daily Briefing, Weekly Report, Goals, Scenarios, Alerts, and Settings.
 
 **Start the web app:**
 ```bash
@@ -52,6 +58,18 @@ cd ~/Projects/bp-health-coach
 streamlit run src/ui/streamlit_app.py
 ```
 Then open: http://localhost:8501
+
+**Available Pages:**
+| Page | Description |
+|------|-------------|
+| Dashboard | Health overview with BP trend, goals preview, and today's briefing |
+| Chat | Interactive conversation with the health coach |
+| Daily Briefing | Morning summary with yesterday's data and today's prediction |
+| Weekly Report | Comprehensive weekly analysis with trends and action plan |
+| Goals | Progress tracking for BP, VO2 Max, sleep, and steps goals |
+| Scenarios | What-if analysis for lifestyle changes |
+| Alerts | Health notifications and pattern warnings |
+| Settings | User profile, AI preferences, and notification settings |
 
 ### 3. FastAPI REST API
 
@@ -321,6 +339,213 @@ The system automatically selects the best AI model for each query:
 
 ---
 
+## Feature 6: Weekly Health Reports
+
+Get comprehensive weekly analysis every Monday with trends, patterns, and action plans.
+
+### CLI Usage
+
+```bash
+python -m src.ui.cli weekly
+```
+
+**Example Output:**
+```
+WEEKLY HEALTH REPORT: January 05 - January 11, 2026
+
+1. BLOOD PRESSURE SUMMARY
+Average: 137/90 mmHg
+Range: 129/81 - 146/97 mmHg
+Variability: ±6.1 mmHg (systolic)
+Days with readings: 7/7
+Status: 7 mmHg above your 130 mmHg goal
+
+2. SLEEP ANALYSIS
+Average: 7.4 hours/night
+Range: 5.4 - 9.1 hours
+Days under 7 hours: 2/7
+vs Previous Week: +0.3 hours ↑
+
+3. ACTIVITY SUMMARY
+Daily Average: 18,316 steps
+Weekly Total: 128,211 steps
+Days over 10,000: 7/7
+
+4. FITNESS (VO2 MAX)
+Current: 37.4 mL/kg/min
+Goal: 43.0 mL/kg/min
+
+5. KEY INSIGHTS
+BEST DAY: 2026-01-10
+- BP: 129/81 mmHg
+- Sleep: 7.9 hours
+- Steps: 21,056
+
+CHALLENGING DAY: 2026-01-07
+- BP: 146/94 mmHg
+- Sleep: 6.5 hours
+- Steps: 26,335
+
+6. ACTION PLAN FOR NEXT WEEK
+1. Focus on BP Reduction - Average BP is 7 mmHg above goal
+2. Add Cardio Sessions - VO2 Max is your strongest BP predictor
+3. Replicate Your Best Day - Follow the same sleep/activity pattern
+```
+
+### Streamlit Usage
+
+1. Navigate to "Weekly Report" page
+2. Select the week ending date
+3. Click "Generate Report"
+4. View raw statistics in expandable section
+
+---
+
+## Feature 7: Goal Tracking Dashboard
+
+Track progress toward your health goals with visual progress bars, trends, and projections.
+
+### CLI Usage
+
+```bash
+python -m src.ui.cli goals
+```
+
+**Example Output:**
+```
+╔══════════════════════════════════════════════════════════════╗
+║                    GOAL TRACKING DASHBOARD                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+Overall Status: ⚠️ AT_RISK
+Goals: 0/4 achieved, 2 on track
+
+────────────────────────────────────────────────────────────
+
+✅ Blood Pressure
+   Current: 131/84 mmHg → Target: 130 mmHg (systolic)
+   Progress: [█████████████████░░░] 86%
+   Trend: ↓ decreasing (-8.5/month)
+   Projection: At current rate, goal in ~1 weeks
+
+○ VO2 Max
+   Current: 37.4 mL/kg/min → Target: 43.0 mL/kg/min
+   Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+   Trend: → stable (-0.7/month)
+
+○ Sleep Duration
+   Current: 6.7 hours → Target: 7.0 hours
+   Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+   Trend: → stable (-0.3/month)
+
+✅ Daily Steps
+   Current: 19,588 steps → Target: 10,000 steps
+   Progress: [████████████░░░░░░░░] 61%
+   Trend: ↑ increasing (+1,502/month)
+```
+
+### Goals Tracked
+
+| Goal | Target | Direction |
+|------|--------|-----------|
+| Blood Pressure | 130 mmHg (systolic) | Lower is better |
+| VO2 Max | 43 mL/kg/min | Higher is better |
+| Sleep Duration | 7 hours | Higher is better |
+| Daily Steps | 10,000 steps | Higher is better |
+
+### Streamlit Usage
+
+1. Navigate to "Goals" page
+2. View overall status and progress summary
+3. Click individual goals for detailed tips and recommendations
+
+---
+
+## Feature 8: Smart Alerts
+
+Get notified about health patterns, achievements, and concerns.
+
+### CLI Usage
+
+```bash
+# Check for new alerts
+python -m src.ui.cli alerts --check
+
+# View recent alerts
+python -m src.ui.cli alerts
+```
+
+### Alert Types
+
+| Alert | Trigger | Priority |
+|-------|---------|----------|
+| Sleep Streak Warning | 3+ nights under 6 hours | Warning |
+| BP Spike | BP > 2 std devs above average | Warning |
+| BP Excellent | BP > 2 std devs below average | Celebration |
+| BP Goal Streak | 7 or 14 days under goal | Celebration |
+| Activity Streak | 7 days with 10k+ steps | Celebration |
+| Trend Warning | BP increased 5+ mmHg week-over-week | Warning |
+| Trend Positive | BP decreased 5+ mmHg week-over-week | Celebration |
+| Unusual Pattern | Elevated BP despite good habits | Warning |
+
+### Streamlit Usage
+
+1. Navigate to "Alerts" page
+2. Click "Check for New Alerts"
+3. View alerts with priority indicators
+4. Dismiss acknowledged alerts
+
+---
+
+## Feature 9: Automated Scheduler
+
+Schedule automatic briefings, reports, and alert checks.
+
+### CLI Usage
+
+```bash
+# View available jobs
+python -m src.ui.cli scheduler
+
+# Run a job manually
+python -m src.ui.cli scheduler --run daily_briefing
+python -m src.ui.cli scheduler --run weekly_report
+python -m src.ui.cli scheduler --run alert_check
+
+# Start scheduler daemon (background)
+python -m src.ui.cli scheduler --start
+```
+
+### Default Schedule
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| Daily Briefing | 8:00 AM | Morning health summary |
+| Weekly Report | Monday 7:00 AM | Comprehensive weekly analysis |
+| Alert Check | Every 4 hours | Pattern detection |
+
+---
+
+## Feature 10: Dashboard (Streamlit)
+
+A visual overview of your health status, accessible from the Streamlit web interface.
+
+### Dashboard Components
+
+1. **Today's Metrics** - Current BP, sleep, steps, VO2 Max with goal comparisons
+2. **BP Trend Chart** - 30-day blood pressure visualization
+3. **Goals Preview** - Top 2 goals with progress bars
+4. **Today's Briefing** - Abbreviated daily summary
+5. **Quick Actions** - Links to detailed pages
+
+### Usage
+
+1. Start Streamlit: `streamlit run src/ui/streamlit_app.py`
+2. Dashboard is the default landing page
+3. Click metrics or buttons to navigate to detailed views
+
+---
+
 ## Quick Start Examples
 
 ### Morning Routine
@@ -451,14 +676,16 @@ ollama list
 
 ---
 
-## What's Coming Next (Phase 3C)
+## What's Coming Next (Future Versions)
 
-| Feature | Description |
-|---------|-------------|
-| Weekly Reports | Automated Monday analysis emails |
-| Real-Time Alerts | Notifications for streaks, anomalies |
-| Goal Tracking | Progress dashboard for BP/VO2/sleep goals |
-| Scheduled Briefings | Automatic 8 AM daily briefings |
+| Feature | Target Version | Description |
+|---------|----------------|-------------|
+| Voice Interface | v1.1 | Ask questions using voice commands |
+| Mobile App | v1.1 | iOS/Android companion app |
+| Doctor Reports | v2.0 | Generate PDF reports for healthcare provider visits |
+| Medication Tracking | v2.0 | Log medications and see impact on BP |
+| Family Sharing | v2.0 | Share progress with family members |
+| Apple Watch Complication | v2.0 | Quick BP status on watch face |
 
 ---
 
