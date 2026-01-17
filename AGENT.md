@@ -1,5 +1,8 @@
 # BP Health Coach - Architecture & Design Decisions
 
+**Version:** 1.0 (Phase 3D Complete)
+**Last Updated:** January 17, 2026
+
 ## Overview
 
 BP Health Coach is an AI-powered health coaching system that transforms personal health data into conversational, personalized guidance. It uses a RAG (Retrieval-Augmented Generation) architecture with multiple LLMs to provide evidence-based recommendations based on YOUR data.
@@ -11,6 +14,12 @@ BP Health Coach is an AI-powered health coaching system that transforms personal
 │                         User Interfaces                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
 │  │  CLI (Typer)│  │  Streamlit  │  │  FastAPI REST API       │  │
+│  │  - chat     │  │  - 8 pages  │  │  - /api/query           │  │
+│  │  - briefing │  │  - Dashboard│  │  - /api/briefing        │  │
+│  │  - weekly   │  │  - Goals    │  │  - /api/scenario        │  │
+│  │  - goals    │  │  - Alerts   │  │                         │  │
+│  │  - alerts   │  │  - Settings │  │                         │  │
+│  │  - scheduler│  │             │  │                         │  │
 │  └──────┬──────┘  └──────┬──────┘  └───────────┬─────────────┘  │
 └─────────┼────────────────┼─────────────────────┼────────────────┘
           │                │                     │
@@ -39,8 +48,20 @@ BP Health Coach is an AI-powered health coaching system that transforms personal
 │  │  SQLite Database    │         │  ChromaDB Vector Store  │    │
 │  │  - daily_health_data│         │  - Semantic search      │    │
 │  │  - conversations    │         │  - Similar day lookup   │    │
-│  │  - 4,032 days       │         │  - Pattern matching     │    │
+│  │  - alerts           │         │  - Pattern matching     │    │
+│  │  - goals            │         │                         │    │
+│  │  - job_history      │         │                         │    │
+│  │  - 4,032 days       │         │                         │    │
 │  └─────────────────────┘         └─────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Scheduler Layer                             │
+│  ┌──────────────────┐  ┌───────────────┐  ┌──────────────────┐  │
+│  │ Daily Briefing   │  │ Weekly Report │  │  Alert Check     │  │
+│  │ (8:00 AM)        │  │ (Mon 7:00 AM) │  │  (Every 4 hrs)   │  │
+│  └──────────────────┘  └───────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -96,6 +117,34 @@ daily_health_data (
     respiratory_rate,
     active_calories, exercise_minutes,
     ...
+)
+
+alerts (
+    id INTEGER PRIMARY KEY,
+    type TEXT,                       -- Alert type
+    priority TEXT,                   -- critical/warning/info/celebration
+    message TEXT,
+    created_at TIMESTAMP,
+    acknowledged INTEGER DEFAULT 0
+)
+
+goals (
+    id INTEGER PRIMARY KEY,
+    name TEXT,
+    metric TEXT,
+    target_value REAL,
+    baseline_value REAL,
+    direction TEXT,                  -- 'lower' or 'higher'
+    start_date DATE,
+    target_date DATE
+)
+
+job_history (
+    id INTEGER PRIMARY KEY,
+    job_name TEXT,
+    run_time TIMESTAMP,
+    status TEXT,
+    result TEXT
 )
 ```
 
@@ -175,7 +224,7 @@ daily_health_data (
 
 ### 7. Feature Architecture
 
-**Core Features (MVP):**
+**Core Features:**
 
 1. **Natural Language Q&A** (`src/features/query_answering.py`)
    - Ask questions in plain English
@@ -192,6 +241,29 @@ daily_health_data (
    - Impact coefficients: VO2 (-1.96), Sleep (-3.1), Steps (-0.0003)
    - Feasibility and timeline estimates
 
+4. **Weekly Reports** (`src/features/weekly_report.py`)
+   - Comprehensive weekly health analysis
+   - Week-over-week comparisons
+   - Best/worst day identification
+   - Action plan recommendations
+
+5. **Goal Tracking** (`src/features/goal_tracking.py`)
+   - Progress toward BP, VO2, Sleep, Steps goals
+   - Trend analysis and projections
+   - Achievement timeline estimates
+
+6. **Smart Alerts** (`src/features/alerts.py`)
+   - Pattern detection (sleep streaks, BP spikes)
+   - Achievement celebrations
+   - Priority-based notifications
+   - Acknowledgment tracking
+
+7. **Scheduler** (`src/scheduler/jobs.py`)
+   - Automated daily briefings (8 AM)
+   - Weekly reports (Monday 7 AM)
+   - Alert checks (every 4 hours)
+   - Job history logging
+
 ### 8. Prediction Approach
 
 **Decision:** Use empirically-derived coefficients for MVP predictions.
@@ -203,7 +275,20 @@ daily_health_data (
 | Sleep | -3.1 mmHg per hour | Phase 2 analysis |
 | Steps | -0.0003 mmHg per step | Phase 2 analysis |
 
-**Future:** Train personalized ML models on user's historical data.
+**ML Models:** (`src/models/ml_models.py`)
+- BPPredictor using scikit-learn
+- Trained on user's historical data
+- Used for daily predictions and scenarios
+
+### 9. BP Display Format
+
+**Decision:** Always show blood pressure as systolic/diastolic (e.g., "134/87 mmHg").
+
+**Implementation:**
+- All features display both values
+- Diastolic estimated from ratio when only systolic available
+- Goals show target as systolic with "(systolic)" label
+- Range displays as "129/81 - 146/97 mmHg"
 
 ## Project Structure
 
@@ -228,15 +313,20 @@ bp-health-coach/
 │   ├── features/
 │   │   ├── daily_briefing.py
 │   │   ├── query_answering.py
-│   │   └── scenario_testing.py
+│   │   ├── scenario_testing.py
+│   │   ├── weekly_report.py    # Phase 3C
+│   │   ├── goal_tracking.py    # Phase 3C
+│   │   └── alerts.py           # Phase 3C
 │   ├── models/
 │   │   ├── ml_models.py      # BP prediction models
 │   │   └── predictions.py    # Scenario analysis
+│   ├── scheduler/
+│   │   └── jobs.py           # Automated job scheduling
 │   ├── api/
 │   │   └── main.py           # FastAPI endpoints
 │   └── ui/
 │       ├── cli.py            # Typer CLI
-│       └── streamlit_app.py  # Web interface
+│       └── streamlit_app.py  # Web interface (8 pages)
 ├── scripts/
 │   ├── setup_database.py
 │   ├── import_health_data.py
@@ -245,8 +335,25 @@ bp-health-coach/
 │   ├── raw/                  # Apple Health exports
 │   ├── processed/            # SQLite database
 │   └── chroma_db/            # Vector embeddings
+├── docs/
+│   ├── current-features.md   # Feature documentation
+│   ├── test-results.md       # Test cases and results
+│   └── apple-health-import-guide.md
 └── tests/
 ```
+
+## Streamlit Pages
+
+| Page | Description |
+|------|-------------|
+| Dashboard | Health overview with metrics, BP trend chart, goals preview |
+| Chat | Interactive conversation with the health coach |
+| Daily Briefing | Morning summary with date selector |
+| Weekly Report | Comprehensive weekly analysis |
+| Goals | Progress tracking with trends and projections |
+| Scenarios | What-if analysis with sliders |
+| Alerts | Health notifications with dismiss functionality |
+| Settings | User profile and preferences |
 
 ## API Endpoints
 
@@ -256,7 +363,7 @@ POST /api/query
   Response: { "response": "...", "intent": "EXPLANATION", "confidence": 0.95 }
 
 GET /api/briefing
-  Response: { "date": "2026-01-16", "briefing": "..." }
+  Response: { "date": "2026-01-17", "briefing": "..." }
 
 POST /api/scenario
   Request:  { "vo2_change": 5, "sleep_change": 1, "steps_change": 2000 }
@@ -276,7 +383,22 @@ python -m src.ui.cli briefing
 python -m src.ui.cli ask "What was my BP yesterday?"
 
 # Test a scenario
-python -m src.ui.cli scenario --vo2 42 --sleep 8
+python -m src.ui.cli scenario --vo2 42 --sleep 8 --steps 12000
+
+# Weekly report
+python -m src.ui.cli weekly
+
+# Goal tracking
+python -m src.ui.cli goals
+
+# Alerts
+python -m src.ui.cli alerts
+python -m src.ui.cli alerts --check
+
+# Scheduler
+python -m src.ui.cli scheduler
+python -m src.ui.cli scheduler --run daily_briefing
+python -m src.ui.cli scheduler --start
 ```
 
 ## Environment Variables
@@ -319,22 +441,42 @@ SQLite    ChromaDB
 
 *With local Llama for simple queries: ~$5/month*
 
-## Future Roadmap
+## Development Phases
 
-### Phase 3B (Next)
-- [ ] Multi-turn conversation improvements
-- [ ] ML model training on user data
-- [ ] Weekly automated reports
+### Phase 3A - Foundation (Complete)
+- [x] CLI interface with Typer
+- [x] Streamlit web UI (3 pages)
+- [x] FastAPI REST endpoints
+- [x] Multi-LLM routing
+- [x] Apple Health data import
+- [x] Intent classification
+- [x] Context retrieval
 
-### Phase 3C
-- [ ] Real-time alerts
-- [ ] Goal tracking
-- [ ] What-if scenario comparison
+### Phase 3B - Intelligence (Complete)
+- [x] ML-based BP predictions
+- [x] Scenario testing with sliders
+- [x] Diastolic BP display throughout
+- [x] Multi-turn conversations
 
-### Phase 3D
-- [ ] Streamlit UI polish
-- [ ] Mobile-friendly web interface
-- [ ] Voice interface (optional)
+### Phase 3C - Automation (Complete)
+- [x] Weekly health reports
+- [x] Goal tracking dashboard
+- [x] Smart alert system
+- [x] Job scheduler
+
+### Phase 3D - Polish (Complete)
+- [x] Dashboard page with overview
+- [x] Settings page
+- [x] 8-page Streamlit UI
+- [x] Complete BP format (systolic/diastolic)
+- [x] UI improvements and styling
+
+### Future Roadmap (v1.1+)
+- [ ] Voice interface
+- [ ] Mobile app
+- [ ] Doctor report generation
+- [ ] Medication tracking
+- [ ] Apple Watch complication
 
 ## Security & Privacy
 
@@ -343,8 +485,16 @@ SQLite    ChromaDB
 - API calls use HTTPS
 - Sensitive queries can route to local Llama
 - User can export/delete all data anytime
+- API keys stored in .env (gitignored)
+
+## Testing
+
+- 23 test cases covering all features
+- All tests passing
+- See `docs/test-results.md` for details
 
 ---
 
 *Document Version: 1.0*
-*Last Updated: January 2026*
+*Release: v1.0 (Phase 3D Complete)*
+*Last Updated: January 17, 2026*
