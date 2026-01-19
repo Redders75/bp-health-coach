@@ -36,14 +36,34 @@ def safe_int(value, default=None):
         return default
 
 
-def import_from_csv(csv_path: Path):
-    """Import health data from a CSV file."""
+def get_last_import_date():
+    """Get the most recent date in the database."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(date) FROM daily_health_data")
+        result = cursor.fetchone()
+        if result and result[0]:
+            return result[0]
+    return None
+
+
+def import_from_csv(csv_path: Path, since_date: str = None):
+    """Import health data from a CSV file.
+
+    Args:
+        csv_path: Path to the CSV file
+        since_date: Only import records after this date (YYYY-MM-DD)
+    """
     print(f"Importing data from {csv_path}")
+
+    if since_date:
+        print(f"Only importing records after: {since_date}")
 
     init_database()
     vector_store = get_vector_store()
 
     imported = 0
+    skipped = 0
 
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
@@ -52,6 +72,10 @@ def import_from_csv(csv_path: Path):
             cursor = conn.cursor()
 
             for row in reader:
+                # Skip records before since_date
+                if since_date and row.get('date') and row['date'] <= since_date:
+                    skipped += 1
+                    continue
                 try:
                     # Insert into SQLite
                     cursor.execute("""
@@ -97,6 +121,8 @@ def import_from_csv(csv_path: Path):
             conn.commit()
 
     print(f"Imported {imported} records.")
+    if skipped > 0:
+        print(f"Skipped {skipped} records (before {since_date}).")
 
 
 def main():
@@ -105,11 +131,23 @@ def main():
 
     parser = argparse.ArgumentParser(description="Import health data")
     parser.add_argument('--csv', type=Path, help="Path to CSV file to import")
+    parser.add_argument('--since', type=str, help="Only import records after this date (YYYY-MM-DD)")
+    parser.add_argument('--delta', action='store_true', help="Only import records after the last import date")
     args = parser.parse_args()
 
     if args.csv:
         if args.csv.exists():
-            import_from_csv(args.csv)
+            since_date = args.since
+
+            # If --delta flag, get the last import date from database
+            if args.delta:
+                since_date = get_last_import_date()
+                if since_date:
+                    print(f"Delta mode: Last data in database is from {since_date}")
+                else:
+                    print("Delta mode: No existing data found, importing all records")
+
+            import_from_csv(args.csv, since_date)
         else:
             print(f"File not found: {args.csv}")
             sys.exit(1)
